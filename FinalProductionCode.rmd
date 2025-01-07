@@ -1,0 +1,789 @@
+---
+title: "CorrectTunneling"
+author: "Joseph S Liu"
+date: "2024-06-13"
+output: html_document
+---
+
+```{r}
+library(httr)
+
+get_player_names <- function(pitcher_ids) {
+  # Initialize an empty list to store results
+  player_names <- list()
+  
+  for (pitcher_id in pitcher_ids) {
+    # Construct the initial URL with the pitcher ID
+    initial_url <- paste0("https://www.mlb.com/player/", pitcher_id)
+    
+    # Make a GET request and follow redirects
+    response <- GET(initial_url)
+    
+    # Check the status code to ensure the request was successful
+    if (status_code(response) == 200) {
+      # Extract the final URL after redirection
+      final_url <- response$url
+      
+      # Extract the player's name from the final URL
+      url_parts <- strsplit(final_url, "/")[[1]]
+      player_info <- url_parts[length(url_parts)]
+      player_name_parts <- strsplit(player_info, "-")[[1]]
+      player_name <- paste(player_name_parts[-length(player_name_parts)], collapse = " ")
+      
+      # Add the player name to the list with the pitcher ID as the key
+      player_names[[as.character(pitcher_id)]] <- player_name
+    } else {
+      warning(sprintf("Failed to retrieve the URL for pitcher ID %d. Status code: %d", pitcher_id, status_code(response)))
+      player_names[[as.character(pitcher_id)]] <- NA
+    }
+  }
+  
+  return(player_names)
+}
+```
+
+```{r}
+chunk1 <- c(112526, 276351, 276520, 276542, 279571, 282332, 285064, 285079, 407793, 407822, 407845, 407890, 408061, 408241, 424144, 425492, 425794, 425844, 429719, 429722, 430580, 430599, 430641, 430661, 430912, 430935, 431148, 432934, 433586, 433587, 433589, 434378, 434442, 434538, 434622, 434628, 434671, 434672, 435043, 435221, 435400, 444468, 444857, 445060, 445197, 445213, 445276, 445926, 446099, 446321, 446372, 446399, 446899, 448178, 448179, 448281, 448306, 448609, 448614, 448802, 448855, 450172, 450203, 450212, 450306, 450308, 450729, 451584, 451596, 451661, 452027, 452657, 452666, 453172, 453178, 453192, 453214, 453265, 453268, 453281, 453284, 453286, 453329, 453343, 453344, 453385, 453562, 453646, 455009, 455119, 455374, 456027, 456034, 456068, 456167, 456501, 456696, 456701, 456713, 457429, 457915, 457918, 458006, 458584, 458676, 458677, 458681, 458690, 458708, 459429, 460059, 460283, 461325, 461829, 461833, 461872, 462136, 462382, 465657, 467008, 467100, 468504, 471822, 471911, 472551, 472610, 473879, 474463, 474699, 475054, 475115, 475243, 475479, 476451, 476454, 476589, 476594, 476595, 477003, 477132, 477569, 488748, 488768, 488786, 488846, 488984, 489119, 489265, 489334, 489446, 490063, 491624, 491646, 491703, 491708, 493157, 493200, 493247, 493603, 500610, 500724, 500779, 500872, 501381, 501593, 501625, 501697, 501789, 501817, 501822, 501925, 501957, 501985, 501992, 502004, 502009, 502026, 502028, 502032, 502042, 502043, 502046, 502083, 502085, 502154, 502171, 502179, 502188, 502190, 502202, 502211, 502212, 502239, 502327, 502381, 502522, 502593, 502624, 502706, 502748, 503285, 503444, 503449, 503569, 504379, 506433, 516969, 517008, 517414, 517593, 518397, 518445, 518452, 518468, 518489, 518516, 518553, 518560, 518566, 518567, 518617, 518633, 518693, 518715, 518716, 518748, 518774, 518813, 518858, 518875, 518876, 518886, 519008, 519043, 519076, 519085, 519096, 519141, 519144, 519151, 519166, 519240, 519242, 519263, 519293, 519294, 519301, 519322, 519326, 519393, 519443, 519455, 520980, 521230, 521655, 523260, 527048, 527054, 527055, 532077, 533167, 534737, 534812, 534910, 534947, 541640, 541652, 542432, 542585, 542881, 542882, 542888, 542914, 542947, 542953, 542960, 543001, 543022, 543037, 543045, 543054, 543056, 543101, 543118, 543135, 543144, 543169, 543184, 543208, 543219, 543243, 543272, 543278, 543294, 543331, 543339, 543359, 543408, 543424, 543475, 543483, 543506, 543507, 543521)
+                 
+chunk2 <- c(628711, 630023, 640444, 640448, 640455, 640463, 640464, 640470, 641154, 641302, 641312, 641341, 641394, 641401, 641427, 641438, 641482, 641540, 641571, 641582, 641627, 641712, 641729, 641743, 641745, 641755, 641771, 641778, 641793, 641816, 641835, 641838, 641851, 641871, 641927, 641941, 642003, 642028, 642073, 642083, 642092, 642098, 642121, 642130, 642152, 642203, 642207, 642231, 642232, 642397, 642528, 642545, 642547, 642558, 642564, 642607, 642701, 643230, 643256, 643290, 643316, 643327, 643338, 643354, 643377, 643410, 643493, 643511, 643617, 643778, 644364, 645261, 647336, 650382, 650530, 650633, 650644, 650671, 650828, 650893, 650895, 656186, 656222, 656232, 656257, 656288, 656302, 656322, 656354, 656420, 656427, 656464, 656529, 656546, 656547, 656557, 656605, 656629, 656685, 656731, 656756, 656794, 656849, 656876, 656887, 656945, 656954, 656970, 657024, 657031, 657044, 657053, 657097, 657140, 657141, 657277, 657571, 657610, 657612, 657624, 658305, 659275, 660271, 660623, 660761, 660813, 660853, 660896, 661255, 661269, 661403, 663423, 663432, 663460, 663465, 663474, 663531, 663554, 663556, 663567, 663738, 663765, 663776, 663855, 663903, 663978, 663986, 664042, 664045, 664062, 664126, 664129, 664141, 664192, 664199, 664208, 664285, 664299, 664353, 664641, 664854, 664948, 665152, 666120, 666159, 666200, 666201, 667498, 668676, 668678, 669060, 669145, 669160, 669203, 669211, 669212, 669302, 669373, 669432, 669456, 670280, 670912, 670950, 672578, 672715, 673633, 675916, 675921, 676051, 676477, 676596, 676606, 676840, 676979, 677651, 677960, 677976, 680686)
+
+chunk3 <- c( 543542, 543548, 543557, 543606, 543699, 543726, 543734, 543766, 543779, 543859, 543883, 543901, 543935, 544150, 544727, 544836, 544928, 544931, 545064, 545332, 545333, 545363, 547179, 547749, 547874, 547888, 547942, 547943, 547973, 548337, 548357, 548384, 548389, 552640, 553878, 554340, 554430, 554431, 570240, 570257, 570488, 570632, 570649, 570663, 570666, 571476, 571510, 571521, 571561, 571578, 571656, 571666, 571670, 571704, 571710, 571735, 571760, 571787, 571800, 571863, 571871, 571882, 571893, 571901, 571927, 571945, 571946, 571948, 571951, 572020, 572021, 572070, 572096, 572125, 572140, 572143, 572193, 572362, 572403, 572703, 572750, 572888, 572955, 572971, 573046, 573064, 573109, 573124, 573185, 573186, 573204, 573589, 573668, 579328, 580792, 582494, 584171, 591693, 592094, 592102, 592130, 592135, 592145, 592169, 592170, 592222, 592229, 592233, 592314, 592332, 592340, 592346, 592351, 592390, 592426, 592454, 592468, 592473, 592593, 592612, 592644, 592662, 592665, 592716, 592717, 592741, 592761, 592767, 592773, 592779, 592789, 592791, 592804, 592811, 592815, 592826, 592836, 592858, 592865, 592866, 592869, 592879, 593140, 593144, 593334, 593372, 593423, 593576, 593679, 593833, 593958, 593974, 594027, 594577, 594736, 594742, 594760, 594795, 594798, 594835, 594840, 594902, 594943, 594965, 594986, 594987, 595001, 595014, 595032, 595191, 595345, 595465, 595881, 595918, 595928, 596001, 596027, 596043, 596057, 596071, 596112, 596133, 596271, 596295, 596720, 598264, 598271, 598286, 598287, 599683, 600526, 600917, 600968, 601713, 605121, 605130, 605135, 605151, 605154, 605155, 605156, 605164, 605177, 605182, 605194, 605195, 605200, 605218, 605228, 605232, 605240, 605242, 605254, 605276, 605280, 605288, 605309, 605347, 605359, 605388, 605397, 605400, 605441, 605446, 605447, 605452, 605483, 605488, 605498, 605507, 605513, 605525, 605538, 605540, 605541, 606131, 606149, 606160, 606162, 606167, 606273, 606424, 606625, 606930, 606965, 607067, 607074, 607188, 607192, 607200, 607215, 607219, 607229, 607231, 607237, 607259, 607352, 607359, 607374, 607391, 607455, 607457, 607473, 607481, 607536, 607560, 607572, 607625, 607644, 608032, 608328, 608331, 608334, 608335, 608337, 608344, 608349, 608371, 608379, 608566, 608638, 608648, 608652, 608665, 608678, 608716, 608717, 608718, 608723, 611093, 612434, 612672, 613534, 614179, 615698, 621052, 621056, 621076, 621097, 621107, 621111, 621112, 621114, 621121, 621142, 621199, 621219, 621237, 621242, 621244, 621249, 621261, 621295, 621345, 621366, 621368, 621381, 621385, 621389, 621397, 622065, 622072, 622075, 622088, 622092, 622097, 622098, 622250, 622251, 622253, 622259, 622446, 622491, 622503, 622505, 622554, 622608, 622663, 622694, 622766, 622772, 622864, 623149, 623167, 623184, 623352, 623364, 623381, 623395, 623430, 623433, 623439, 623451, 623465, 623470, 624133, 624586, 625643, 626929, 628317, 628333, 628452)
+
+
+pitcher_ids = c(chunk1,chunk2,chunk3)
+# Filter the data for rows where the pitcher is in the pitcher_ids list
+thousandPitches <- data[data$pitcher %in% pitcher_ids, ]
+
+
+# Print the number of rows in the sampled data
+print(nrow(thousandPitches))
+
+```
+
+
+```{r}
+
+
+
+filter_in_tunneling <- function(data, threshold = 0.84) {
+  # Directly filter data based on the distance calculation
+  in_tunnel_data <- data %>%
+    filter(sqrt((x18 - xavg)^2 + (z18 - zavg)^2) <= threshold)
+
+  print(paste("Number of rows in filtered_in_tunnel:", nrow(in_tunnel_data)))
+  return(in_tunnel_data)
+}
+filter_out_tunneling <- function(data, threshold = 0.84) {
+  # Directly filter data based on the distance calculation
+  in_tunnel_data <- data %>%
+    filter(sqrt((x18 - xavg)^2 + (z18 - zavg)^2) > threshold)
+
+  return(in_tunnel_data)
+}
+
+filter_in_tunneling_release <- function(data, threshold = 0.84) {
+  # Directly filter data based on the distance calculation
+  in_tunnel_data <- data %>%
+    filter(sqrt((release_pos_x - xRelease)^2 + (release_pos_z - zRelease)^2) <= threshold)
+
+  print(paste("Number of rows in Release Position filtered_in_tunnel:", nrow(in_tunnel_data)))
+  return(in_tunnel_data)
+}
+filter_out_tunneling_release <- function(data, threshold = 0.84) {
+  # Directly filter data based on the distance calculation
+  in_tunnel_data <- data %>%
+    filter(sqrt((release_pos_x - xRelease)^2 + (release_pos_z - zRelease)^2) > threshold)
+
+  return(in_tunnel_data)
+}
+
+
+total_hit_percentage <- function(data) 
+{
+  #Counts the number of hits, strieks and balls
+  s_count <- sum(data$type == 'S')
+  x_count <- sum(data$type == 'X')
+  b_count <- sum(data$type == 'B')
+
+  # Calculates the ratio of hits over strikes, balls and hits
+  ratio_of_X <- x_count / (s_count + x_count + b_count)
+
+ return(ratio_of_X)
+}
+
+### Hitting Statistics
+########################################
+tunneling_hitting_ratio <- function(data) {
+  # Count the number of rows where type is "X"
+  count_type_X <- sum(data$type == "X")
+
+  # Calculate ratio
+  ratio <- if (nrow(data) > 0) count_type_X / nrow(data) else NA
+  
+  return(ratio)
+}
+
+# Example usage
+# result <- tunneling_hitting_ratio(data)
+###Defining hitting statistic functions
+#######################################
+BA = function(data)
+{
+  Hit_set = data %>%
+    filter(hit == 1)
+ 
+  At_bat_set = data %>%
+    filter(events != "")
+ 
+  BA = nrow(Hit_set)/nrow(At_bat_set)
+  return(BA)
+}
+WHA = function(data)
+{
+  Hit_into_play_set = data %>%
+    filter(description == "hit_into_play")
+ 
+  WH_set = data %>%
+    filter(launch_speed >= 95)
+ 
+  WHA = nrow(WH_set)/nrow(Hit_into_play_set)
+  return(WHA)
+}
+SM = function(data)
+{
+  Swing_set = ifelse(data$description == "foul" | data$description == "hit_into_play"
+                       | data$description == "foul_bunt"| data$description == "bunt_foul_tip"|
+                         data$description == "fout_pitchout"| data$description == "missed_bunt"|
+                         data$description == "foul_tip" | data$description == "swinging_strike" |
+                         data$description == "swinging_strike_blocked" , 1, 0)
+  Miss_set = ifelse(data$description == "missed_bunt" | data$description == "swinging_strike" |
+                        data$description == "swinging_strike_blocked", 1, 0)
+   
+  SM = sum(Miss_set)/sum(Swing_set)
+  return(SM)
+}
+HR = function(data)
+{
+  At_bat_set = data %>%
+    filter(events != "")
+ 
+  HR_set = data %>%
+    filter(events == "home_run")
+ 
+  HR = nrow(HR_set)/nrow(At_bat_set)
+  return(HR)
+}
+GB = function(data)
+{
+   Hit_into_play_set = data %>%
+     filter(description == "hit_into_play")
+   
+  GB_set = data %>%
+    filter(bb_type == "ground_ball")
+ 
+  GB = nrow(GB_set)/nrow(Hit_into_play_set)
+  return(GB)
+}
+```
+
+Generating Stats
+
+```{r}
+# Create an empty DataFrame with numeric columns
+stats_df <- data.frame(
+  total_hit_percentage = numeric(0),
+  inTun_tunnel_hit_percentage = numeric(0),
+  inTun_batting_average = numeric(0),
+  inTun_WellHittingAverage = numeric(0),
+  inTun_SwingMissPercentage = numeric(0),
+  inTun_HomeRunPercentage = numeric(0),
+  inTun_GroundBallPercentage = numeric(0),
+  outTun_tunnel_hit_percentage = numeric(0),
+  outTun_batting_average = numeric(0),
+  outTun_WellHittingAverage = numeric(0),
+  outTun_SwingMissPercentage = numeric(0),
+  outTun_HomeRunPercentage = numeric(0),
+  outTun_GroundBallPercentage = numeric(0)
+)
+```
+
+```{r}
+generate_tunnel_statistics <- function(data) {
+  # Helper function to handle NA values in rounding
+  roundNA <- function(x, digits) {
+    if (is.na(x)) {
+      return("NA")
+    } else {
+      return(round(x, digits))
+    }
+  }
+
+  # Calculate Total Hit Percentage
+  total_hit_percentage <- tunneling_hitting_ratio(data)
+  print(paste("Total-Hit Percentage:", total_hit_percentage))
+
+  # In-tunnel calculations
+  in_tun_data <- filter_in_tunneling(data)
+  print(paste("In-tunnel data:", nrow(in_tun_data)))
+  
+  in_tun_tunnel_hit_percentage <- tunneling_hitting_ratio(in_tun_data)
+  print(paste("In-tunnel tunnel hit percentage:", in_tun_tunnel_hit_percentage))
+  
+  in_tun_batting_average <- BA(in_tun_data)
+  print(paste("In-tunnel batting average:", in_tun_batting_average))
+  
+  in_tun_WellHittingAverage <- WHA(in_tun_data)
+  print(paste("In-tunnel Well-Hitting Average:", in_tun_WellHittingAverage))
+  
+  in_tun_SwingMissPercentage <- SM(in_tun_data)
+  print(paste("In-tunnel Swing-Miss Percentage:", in_tun_SwingMissPercentage))
+  
+  in_tun_HomeRunPercentage <- HR(in_tun_data)
+  print(paste("In-tunnel Home Run Percentage:", in_tun_HomeRunPercentage))
+  
+  in_tun_GroundBallPercentage <- GB(in_tun_data)
+  print(paste("In-tunnel Ground Ball Percentage:", in_tun_GroundBallPercentage))
+  
+  # Out-tunnel calculations
+  out_tun_data <- filter_out_tunneling(data)
+  print(paste("Out-tunnel data:", nrow(out_tun_data)))
+  
+  out_tun_tunnel_hit_percentage <- tunneling_hitting_ratio(out_tun_data)
+  print(paste("Out-tunnel tunnel hit percentage:", out_tun_tunnel_hit_percentage))
+  
+  out_tun_batting_average <- BA(out_tun_data)
+  print(paste("Out-tunnel batting average:", out_tun_batting_average))
+  
+  out_tun_WellHittingAverage <- WHA(out_tun_data)
+  print(paste("Out-tunnel Well-Hitting Average:", out_tun_WellHittingAverage))
+  
+  out_tun_SwingMissPercentage <- SM(out_tun_data)
+  print(paste("Out-tunnel Swing-Miss Percentage:", out_tun_SwingMissPercentage))
+  
+  out_tun_HomeRunPercentage <- HR(out_tun_data)
+  print(paste("Out-tunnel Home Run Percentage:", out_tun_HomeRunPercentage))
+  
+  out_tun_GroundBallPercentage <- GB(out_tun_data)
+  print(paste("Out-tunnel Ground Ball Percentage:", out_tun_GroundBallPercentage))
+  
+  new_row <- data.frame(
+    total_hit_percentage = total_hit_percentage,
+    inTun_tunnel_hit_percentage = in_tun_tunnel_hit_percentage,
+    inTun_batting_average = in_tun_batting_average,
+    inTun_WellHittingAverage = in_tun_WellHittingAverage,
+    inTun_SwingMissPercentage = in_tun_SwingMissPercentage,
+    inTun_HomeRunPercentage = in_tun_HomeRunPercentage,
+    inTun_GroundBallPercentage = in_tun_HomeRunPercentage,
+    outTun_tunnel_hit_percentage = out_tun_tunnel_hit_percentage,
+    outTun_batting_average = out_tun_batting_average,
+    outTun_WellHittingAverage = out_tun_WellHittingAverage,
+    outTun_SwingMissPercentage = out_tun_SwingMissPercentage,
+    outTun_HomeRunPercentage = out_tun_HomeRunPercentage,
+    outTun_GroundBallPercentage = out_tun_GroundBallPercentage
+  )
+  
+  return (new_row)
+}
+```
+
+
+```{r}
+library(ggplot2)
+
+plot_coordinates <- function(datafin, x_coordinates, y_coordinates, x_release, y_release, pitch_type, pitcher_id) {
+  ggplot(datafin, aes(x = x18, y = z18)) +
+    geom_point(aes(color = "18 feet"), size = 2) +
+    geom_point(aes(x = release_pos_x, y = release_pos_z, color = "Line coordinates"), size = 2) +
+    geom_point(aes(x = plate_x, y = plate_z, color = "Strikezone"), size = 2) +
+    geom_point(data = data.frame(x = x_coordinates, y = y_coordinates), aes(x = x, y = y, color = "18ft Tunnel position"), size = 12, alpha = 0.5) +
+    geom_point(data = data.frame(x = x_release, y = y_release), aes(x = x, y = y, color = "Release Tunnel position"), size = 12, alpha = 0.5) +
+    labs(x = "X Coordinate", y = "Z Coordinate", title = paste("Plot for", pitch_type, " of player ", get_player_names(pitcher_id))) +
+    geom_segment(aes(x = -0.8391667, xend = -0.8391667, y = 1.524, yend = 3.673), linetype = "dotted", color = "black") +
+    geom_segment(aes(x = 0.8391667, xend = 0.8391667, y = 1.524, yend = 3.673), linetype = "dotted", color = "black") +
+    geom_segment(aes(x = -0.839, xend = 0.839, y = 1.524, yend = 1.524), linetype = "dotted", color = "black") +
+    geom_segment(aes(x = -0.839, xend = 0.839, y = 3.67333333, yend = 3.67333333), linetype = "dotted", color = "black") +
+    coord_fixed(ratio = 1) +
+    xlim(-4, 4) +
+    ylim(0, 7) +
+    scale_color_manual(name = "Legend",
+                       values = c("18 feet" = "blue",
+                                  "Line coordinates" = "green",
+                                  "Strikezone" = "purple",
+                                  "Release Tunnel position" = "red",
+                                  "18ft Tunnel position" = "orange"),
+                       labels = c("18 feet",
+                                  "Line coordinates",
+                                  "Strikezone",
+                                  "Release Tunnel position",
+                                  "18ft Tunnel position")) +
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          legend.title = element_text(face = "bold"),
+          legend.box = "vertical",
+          legend.margin = margin(t = 5, r = 0, b = 5, l = 0),
+          legend.box.just = "center")
+}
+```
+
+```{r}
+
+getFourSeamTunnels <- function(data, pitcherHandedness, batterHandedness, pitcher_id) {
+  base_speed = 93.3728
+  
+  dataff <- filter(data, pitch_type == "FF" & release_speed > (base_speed - 1) & release_speed < (base_speed + 1) & p_throws == pitcherHandedness)
+  print(paste("[getFourseamTunnels] Number of rows in dataff:", nrow(dataff)))
+
+  # Adjust h and k based on pitcherHandedness and batterHandedness
+  h <- ifelse(pitcherHandedness == "L" & batterHandedness == "R", -0.2795,
+              ifelse(pitcherHandedness == "R" & batterHandedness == "R", 0.2795, 0))
+  
+  k <- 3.61
+
+  dataff$radius <- sqrt(((h - dataff$plate_x)^2) + ((k - dataff$plate_z)^2))
+  
+  # Further filter data to pitches that land in our two-ball zone
+  datafin <- filter(dataff, radius < 0.84)
+  print(paste("[getFourseamTunnels] Number of rows in datafin:", nrow(datafin)))
+  
+  # Calculate the means of the specified columns
+  column_means <- colMeans(datafin[, c("release_pos_x", "release_pos_z", "x18", "z18")], na.rm = TRUE)
+
+  
+  x18cords <- column_means["x18"]
+  z18cords <- column_means["z18"]
+  print(paste("[getFourSeamTunnels] The 18 feet coordinates are X : ", x18cords,", Y : ", z18cords))
+  xReleaseCoords <- column_means["release_pos_x"]
+  zReleaseCoords <- column_means["release_pos_z"]
+  print(paste("[getFourSeamTunnels] The Release Position coordinates are X : ", xReleaseCoords,", Y : ", zReleaseCoords))
+  
+  
+  debuggingplot <- plot_coordinates(datafin,x18cords, z18cords, xReleaseCoords,zReleaseCoords, pitch_type, pitcher_id)
+  print(debuggingplot)
+
+  
+  return(list(mean_xcords = x18cords, mean_zcords = z18cords, xRelease = xReleaseCoords, zRelease = zReleaseCoords))
+    
+}
+
+```
+
+```{r}
+findCenterOfPitch <- function(data, pitcherHandedness, batterHandedness) {
+    pitch_type = "FF"
+    # Define the base speeds for each pitch type
+    base_speeds <- c(FF = 93.3728, SI = 92.4290, SL = 85.6178, CH = 84.5143, CU = 78.3268)
+  
+    # Get the base speed for the given pitch type
+    base_speed <- base_speeds["FF"]
+    print(paste("Base speed for", pitch_type, "is", base_speed))
+    
+    findSpeedDataFrame <- filter(data, pitch_type == base_speed)
+    
+    averageSpeed <- mean(findSpeedDataFrame$release_speed)
+  
+    print(paste("Average Speed for the ", base_speed, " is ", averageSpeed , " mph"))
+
+
+    # Filter data to just 4-seam fastballs between 94-96mph
+    dataff <- filter(data, pitch_type == "FF" & release_speed > (base_speed - 1) & release_speed < (base_speed + 1) & p_throws == pitcherHandedness)
+    print(paste("Number of rows in dataff:", nrow(dataff)))
+    
+    max_speed <- max(data$release_speed)
+    min_speed <- min(data$release_speed)
+    print(paste("Top speed for '",pitch_type, "':", max_speed))
+    print(paste("Bottom speed for '",pitch_type,"':", min_speed))
+
+    # Adjust h and k based on pitcherHandedness and batterHandedness
+    h <- ifelse(pitcherHandedness == "L" & batterHandedness == "R", -0.2795,
+                ifelse(pitcherHandedness == "R" & batterHandedness == "R", 0.2795, 0))
+    
+    k <- 3.61
+    
+    dataff$radius <- sqrt(((h - dataff$plate_x)^2) + ((k - dataff$plate_z)^2))
+    
+    # Further filter data to pitches that land in our two-ball zone
+    datafin <- filter(dataff, radius < 0.84)
+    print(paste("Number of rows in datafin:", nrow(datafin)))
+    
+    # Calculations for lines
+    tval <- (datafin$release_pos_y - 1.417) / -(datafin$y18 - datafin$release_pos_y)
+    xcords <- ((datafin$x18 - datafin$release_pos_x) * tval) + datafin$release_pos_x
+    zcords <- ((datafin$z18 - datafin$release_pos_z) * tval) + datafin$release_pos_z
+    
+    mean_xcords <- mean(xcords)
+    mean_zcords <- mean(zcords, na.rm = TRUE)
+    print(paste("Mean X-coordinate:", mean_xcords))
+    print(paste("Mean Z-coordinate:", mean_zcords))
+    
+    # Calculate averages
+    data$xavg <- mean_xcords
+    data$zavg <- mean_zcords
+    
+    strikezone_x <- mean(datafin$plate_x)
+    strikezone_z <- mean(datafin$plate_z)
+    
+    print(paste("Strike Zone X-coordinate:", mean(datafin$plate_x)))
+    print(paste("Strike Zone Z-coordinate:", mean(datafin$plate_z)))
+        # Return the pitch statistics along with max and min speeds
+    return(data)
+}
+
+```
+
+========================================================================================
+
+Vertical movement
+
+```{r}
+
+calculateVerticalTunnel <- function(df) {
+  base_speeds <- c(FF = 95, SI = 92.4290, SL = 85.6178, CH = 84.5143, CU = 78.3268)
+  
+  df <- df %>%
+    mutate(
+      ztunnel = case_when(
+        pitch_type == "FF" ~ zavg + (7/60) * (release_speed - 95),
+        pitch_type == "SI" ~ zavg + (7/60) * (release_speed - 95),
+        pitch_type == "SL" ~ zavg + (7/60) * (release_speed - 95),
+        pitch_type == "CH" ~ zavg + (7/60) * (release_speed - 95),
+        pitch_type == "CU" ~ zavg + (7/60) * (release_speed - 95),
+        TRUE ~ ztunnel
+      )
+    )
+  
+  return(df)
+}
+
+
+```
+
+Horizontal Movement
+
+```{r}
+library(dplyr)
+
+calculateHorizontalTunnel <- function(df, hand) {
+  df <- df %>%
+    mutate(
+      xtunnel = case_when(
+        hand == "R" & pitch_husband == "FF" ~ xavg + 0.48,
+        hand == "R" & pitch_husband == "SI" ~ xavg + 14*0.08,
+        hand == "R" & pitch_husband == "SL" ~ xavg - 0.20,
+        hand == "R" & pitch_husband == "CH" ~ xavg + 0.48,
+        hand == "R" & pitch_husband == "CU" ~ xavg - 0.20,
+        hand == "L" & pitch_husband == "FF" ~ xavg - 0.48,
+        hand == "L" & pitch_husband == "SI" ~ xavg - 14*0.08,
+        hand == "L" & pitch_husband == "SL" ~ xavg + 0.20,
+        hand == "L" & pitch_husband == "CH" ~ xavg - 0.48,
+        hand == "L" & pitch_husband == "CU" ~ xavg + 0.20,
+        TRUE ~ xavg
+      ),
+      ztunnel = case_when(
+        pitch_husband == "SI" ~ zavg - 0.08*3,
+        pitch_husband == "CH" ~ zavg - 0.08*8,
+        pitch_husband == "CU" ~ zavg - 0.08*8,
+        pitch_husband == "SL" ~ zavg - 0.08*10,
+        TRUE ~ zavg
+      )
+    )
+  
+  return(df)
+}
+```
+
+============================================================
+Combining
+
+```{r}
+calculateTotalTunnel <- function(data, hand) {
+    
+  # Apply the calculateHorizontalTunnel function
+  data1 <- calculateHorizontalTunnel(data, hand)
+  # Apply the calculateVerticalTunnel function to the resulting dataframe
+  data2 <- calculateVerticalTunnel(data1)
+
+  
+  return(data2)
+}
+```
+
+```{r}
+pitcher_ids <- c(668678)
+
+# Filter the data for rows where the pitcher is in the pitcher_ids list
+zacgallen <- data[data$pitcher %in% pitcher_ids, ]
+
+
+
+# Print the number of rows in the sampled data
+print(nrow(zacgallen))
+```
+
+```{r}
+pitcher_ids <- c(669203)
+
+# Filter the data for rows where the pitcher is in the pitcher_ids list
+corbinbraum <- data[data$pitcher %in% pitcher_ids, ]
+
+
+
+# Print the number of rows in the sampled data
+print(nrow(corbinbraum))
+```
+
+
+
+```{r}
+corbinbraum <- findCenterOfPitch(corbinbraum,"R","R")
+totalResultsDataframe <- calculateTotalTunnel(corbinbraum)
+```
+
+```{r}
+get_player_names(668678)
+```
+
+```{r}
+library(ggplot2)
+
+plotTestCoordinates <- function(datafin, pitch_type, hand) {
+  pitcher_id <- unique(datafin$pitcher)[1]
+  
+  # Filter the dataframe for the specified pitch_type and hand
+  datafin_filtered <- datafin[datafin$pitch_husband == pitch_type & datafin$stand == hand, ]
+  print(paste("[plotTestCoordinates] The number of pitches after filtering for pitch type and hand is:", nrow(datafin_filtered)))
+  
+  
+  # Extract the required coordinates from the filtered dataframe
+  x_coordinates <- datafin_filtered$xtunnel
+  y_coordinates <- datafin_filtered$ztunnel
+  x_release <- datafin_filtered$xavg
+  y_release <- datafin_filtered$zavg
+  x_plate <- datafin_filtered$plate_x
+  y_plate <- datafin_filtered$plate_z
+  
+  ggplot(datafin_filtered, aes(x = xavg, y = zavg)) +
+    geom_point(data = data.frame(x = x_plate, y = y_plate), aes(x = x, y = y, color = "Plate Coordinates"), size = 8, alpha = 0.1) +
+    geom_point(data = data.frame(x = x_coordinates, y = y_coordinates), aes(x = x, y = y, color = "StrikeZone Tunnels"), size = 12, alpha = 0.2) +
+    geom_point(aes(color = "Line"), size = 10, alpha = 0.6) +
+    labs(x = "X Coordinate", y = "Z Coordinate", title = paste("Plot for", pitch_type, "of player", pitcher_id)) +
+    geom_segment(aes(x = -0.8391667, xend = -0.8391667, y = 1.524, yend = 3.673), linetype = "dotted", color = "black") +
+    geom_segment(aes(x = 0.8391667, xend = 0.8391667, y = 1.524, yend = 3.673), linetype = "dotted", color = "black") +
+    geom_segment(aes(x = -0.839, xend = 0.839, y = 1.524, yend = 1.524), linetype = "dotted", color = "black") +
+    geom_segment(aes(x = -0.839, xend = 0.839, y = 3.67333333, yend = 3.67333333), linetype = "dotted", color = "black") +
+    coord_fixed(ratio = 1) +
+    xlim(-3, 3) +
+    ylim(0, 5) +
+    scale_color_manual(name = "Legend",
+                       values = c("Line" = "green",
+                                  "StrikeZone Tunnels" = "orange",
+                                  "Plate Coordinates" = "blue"),
+                       labels = c("Line",
+                                  "StrikeZone Tunnels",
+                                  "Plate Coordinates")) +
+    theme_minimal() +
+    theme(legend.position = "bottom",
+          legend.title = element_text(face = "bold"),
+          legend.box = "vertical",
+          legend.margin = margin(t = 5, r = 0, b = 5, l = 0),
+          legend.box.just = "center")
+}
+```
+
+```{r}
+processPlayerData <- function(pitcher_id, hand) {
+  # Filter the data for rows where the pitcher matches the given pitcher_id
+  player_data <- data[data$pitcher == pitcher_id, ]
+  
+  LeftorRight <- set_pitch_based_on_p_stand(player_data, pticher_id)
+  print(paste("[processPlayerData] This Player is :", LeftorRight, "-handed"))
+  
+  # Print the number of rows in the filtered data
+  print(paste("Number of rows for pitcher", pitcher_id, ":", nrow(player_data)))
+  
+  # Find the center of the pitch for the player data
+  player_data_centered <- findCenterOfPitch(player_data, LeftorRight, hand)
+  
+  # Calculate the total tunnel for the player data
+  totalResultsDataframe <- calculateTotalTunnel(player_data_centered, hand)
+  
+  pitches <- c("FF", "SI", "SL", "CH", "CU")
+  
+  for (pitch in pitches) {
+    
+    print(plotTestCoordinates(totalResultsDataframe, pitch, hand))
+  }
+  return(totalResultsDataframe)
+}
+```
+
+```{r}
+joemantiply <- processPlayerData(621244)
+```
+
+```{r}
+testDataframe <- processPlayerData(669203, "R")
+```
+
+```{r}
+husbandList <- c(621244,668678,518876,663993,612434,668678,605397,477132,607536)
+
+# Filter the data for rows where the pitcher is in the pitcher_ids list
+husbandData <- data[data$pitcher %in% husbandList, ]
+LandR <- c("R","L")
+
+for (pitches in husbandList)
+{
+  for (hand in LandR)
+  {
+    processPlayerData(pitches, hand) 
+  }
+}
+```
+
+```{r}
+pitches <- c("FF", "SI", "SL", "CH", "CU")
+
+for (pitch in pitches) {
+  print(plotTestCoordinates(corbinBurnes, pitch))
+}
+```
+
+============================================================
+
+```{r}
+
+set_pitch_based_on_p_stand <- function(data, pitcher) {
+
+        filtered_data <- dplyr::filter(data, pitcher == pitcher)
+
+        
+        count_r <- sum(filtered_data$p_throws == "R", na.rm = TRUE)
+        count_l <- sum(filtered_data$p_throws == "L", na.rm = TRUE)
+        
+
+        if (count_r > count_l) {
+          pitch <- "R"
+        } else if (count_l > count_r) {
+          pitch <- "L"
+        } else {
+          
+          pitch <- "Tie" 
+        }
+      
+        return(pitch)
+      }
+
+
+
+# Function to translate pitch types
+translate_pitch <- function(pitch_type) {
+  translation <- switch(pitch_type,
+                        'Four.Seam' = 'FF',
+                        'Two.Seam' = 'SI',
+                        'ChangeUp.Splitter' = 'CH',
+                        'Slider.Cutter' = 'SL',
+                        'Curveball' = 'CU',
+                        pitch_type)  # If no match, return the original pitch_type
+  return(translation)
+}
+
+# Function to filter the dataframe
+filter_data <- function(data, pitcher_id, stand, translated_pitch_type, pitcher_hand) {
+  filtered_data <- data %>%
+    filter(pitcher == pitcher_id, stand == stand, p_throws == pitcher_hand) %>%
+    filter(pitch_type %in% c(translated_pitch_type))
+  return(filtered_data)
+}
+
+generate_plots3 <- function(data_total) {
+  # Define the combinations of parameters
+  stands <- c("R", "L")
+  pitch_types <- c("Four.Seam", "Two.Seam", "ChangeUp.Splitter", "Slider.Cutter", "Curveball")
+  pitchers <- unique(data_total$pitcher)
+  print(pitchers)
+  
+  # Initialize a dataframe to store results
+  results <- data.frame()
+  
+  # Loop through each combination of batter stand and pitch type
+  for (stand in stands) {
+    for (pitch_type in pitch_types) {
+      # Translate the pitch type
+      translated_pitch_type <- translate_pitch(pitch_type)
+      
+      for (pitcher_id in pitchers) {
+        # Determine the pitcher's handedness
+        pitcherHand <- set_pitch_based_on_p_stand(data_total, pitcher_id)
+        
+        #playerName <- get_player_names(pitcher_id)
+        
+        data_filtered_pitcher  <- filter(data_total, pitcher == pitcher_id)
+        
+        #print(paste("[generate_plots3] Number of Rows once we filter for the Pitcher of ", playerName, " is :", nrow(data_filtered_pitcher)))
+        
+        unique_pitchers <- unique(data_filtered_pitcher$pitcher)
+        print(paste("[generate_plots3] Unique pitchers in the filtered dataset:", paste(unique_pitchers, collapse = ", ")))
+                
+        
+        # Find the center of the pitch
+        pitch_stats <- findCenterOfPitch(data_filtered_pitcher, translated_pitch_type, pitcherHand, stand)
+
+        
+        filtered_data <- data_filtered_pitcher %>%
+            filter(pitcher == pitcher_id & pitch_type == translated_pitch_type & stand == stand)
+        print(paste("[generate_plots3] Filtered Data has this many rows: ", nrow(filtered_data)))
+        
+        filtered_data$xavg <- mean(pitch_stats$mean_xcords)
+        print(paste("[generate_plots3] X18 Mean Coordinate is : ", mean(pitch_stats$mean_xcords)))
+        filtered_data$zavg <- mean(pitch_stats$mean_zcords)
+        print(paste("[generate_plots3] Z18 Mean Coordinate is : ", mean(pitch_stats$mean_zcords)))
+        
+        hitting_stats <- generate_tunnel_statistics(filtered_data)
+        
+        # Store the data in the results dataframe
+        results <- rbind(results, data.frame(
+          pitcher = pitcher_id,
+          stand = stand,
+          pitch_type = pitch_type,
+          mean_xcords = mean(pitch_stats$mean_xcords),
+          mean_zcords = mean(pitch_stats$mean_zcords),
+          xRelease = mean(pitch_stats$xRelease),
+          zRelease = mean(pitch_stats$zRelease),
+          pitcherHands = pitcherHand,
+          hitting_stats
+#          total_hit_percentage = hitting_stats$total_hit_percentage,
+#          inTun_tunnel_hit_percentage = hitting_stats$inTun_tunnel_hit_percentage,
+#          inTun_batting_average = hitting_stats$inTun_batting_average,
+#          inTun_WellHittingAverage = hitting_stats$inTun_WellHittingAverage,
+#          inTun_SwingMissPercentage = hitting_stats$inTun_SwingMissPercentage,
+#          inTun_HomeRunPercentage = hitting_stats$inTun_HomeRunPercentage,
+#          inTun_GroundBallPercentage = hitting_stats$inTun_GroundBallPercentage,
+#          outTun_tunnel_hit_percentage = hitting_stats$outTun_tunnel_hit_percentage,
+#          outTun_batting_average = hitting_stats$outTun_batting_average,
+#          outTun_WellHittingAverage = hitting_stats$outTun_WellHittingAverage,
+#          outTun_SwingMissPercentage = hitting_stats$outTun_SwingMissPercentage,
+#          outTun_HomeRunPercentage = hitting_stats$outTun_HomeRunPercentage,
+#          outTun_GroundBallPercentage = hitting_stats$outTun_GroundBallPercentage
+        ))
+      }
+    }
+  }
+  
+  return(results)
+}
+
+```
+
+```{r}
+resultsData <- generate_plots3(husbandData)
+```
+
+```{r}
+husbandList <- c(621244,668678,518876,663993,612434,668678,605397,477132,607536)
+
+# Filter the data for rows where the pitcher is in the pitcher_ids list
+husbandData <- data[data$pitcher %in% husbandList, ]
+
+# Print the number of rows in the sampled data
+print(nrow(husbandData))
+```
